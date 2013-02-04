@@ -8,6 +8,7 @@ except ImportError:
 import warnings
 import functools
 from collections import namedtuple
+from .tagset import Tag
 
 Token = namedtuple('Token', 'text annotations')
 Annotation = namedtuple('Annotation', 'lex gr joined')
@@ -49,7 +50,7 @@ def parse_xml(source):
 
 
 def simplify(sents, remove_accents=True, join_split=True,
-             join_hyphenated=True, punct_tag='PNCT'):
+             join_hyphenated=True, punct_tag='PNCT', wrap_tags=True):
     """
     Simplify the result of ``sents`` parsing:
 
@@ -57,7 +58,9 @@ def simplify(sents, remove_accents=True, join_split=True,
     * annotate punctuation with ``punct_tag``;
     * join split words into a single token (if ``join_split==True``);
     * join hyphenated words to a single token (if ``join_hyphenated==True``);
-    * remove accents (if ``remove_accents==True``).
+    * remove accents (if ``remove_accents==True``);
+    * convert string tag representation to ruscorpora.Tag instances
+      (if ``wrap_tags==True``).
     """
 
     def remove_extra_annotations(token):
@@ -111,6 +114,13 @@ def simplify(sents, remove_accents=True, join_split=True,
 
             yield text, new_annotations
 
+    def with_wrapped_tags(sent):
+        for text, annotations in sent:
+            new_annotations = []
+            for ann in annotations:
+                new_annotations.append(ann._replace(gr=Tag(ann.gr)))
+            yield text, new_annotations
+
 
     for sent in sents:
         sent = map(remove_extra_annotations, sent)
@@ -125,6 +135,9 @@ def simplify(sents, remove_accents=True, join_split=True,
             sent = join_hyphenated_tokens(sent)
 
         sent = fix_punct_tags(sent)
+
+        if wrap_tags:
+            sent = with_wrapped_tags(sent)
 
         yield [Token(*t) for t in sent]
 
