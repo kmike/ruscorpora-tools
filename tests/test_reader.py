@@ -18,12 +18,12 @@ def test_simple():
 
     assert _parse(corpus) == [
         [
-            ('«', [rnc.Annotation(lex='«', gr='PNCT', joined=None)]),
-            ('Школа', [rnc.Annotation(lex='школа', gr='S,f,inan=sg,nom', joined=None)]),
-            ('злословия', [rnc.Annotation(lex='злословие', gr='S,n,inan=sg,gen', joined=None)]),
-            (' » ,-', [rnc.Annotation(lex=' » ,-', gr='PNCT', joined=None)]),
-            ('СМИ', [rnc.Annotation(lex='сми', gr='S,0=sg,nom', joined=None)]),
-            (' !', [rnc.Annotation(lex=' !', gr='PNCT', joined=None)])
+            ('«', '«', 'PNCT', None),
+            ('Школа', 'школа', 'S,f,inan=sg,nom', None),
+            ('злословия', 'злословие', 'S,n,inan=sg,gen', None),
+            (' » ,-', ' » ,-', 'PNCT', None),
+            ('СМИ', 'сми', 'S,0=sg,nom', None),
+            (' !', ' !', 'PNCT', None)
         ]
     ]
 
@@ -34,14 +34,30 @@ def test_joined_hyphen():
     <w><ana lex="Сегодня" gr="ADV" joined="hyphen"></ana>Сег`одня</w>-<w><ana lex="завтра" gr="ADV" joined="hyphen"></ana>з`автра</w>
     <w><ana lex="школа" gr="S,f,inan=sg,nom"></ana>шк`ола</w></se>
     """
-    assert _parse(corpus) == [
-        [
-            ('Сегодня-завтра', [
-                rnc.Annotation(lex='Сегодня', gr='ADV', joined='hyphen'),
-                rnc.Annotation(lex='завтра', gr='ADV', joined='hyphen')]),
-            ('школа', [rnc.Annotation(lex='школа', gr='S,f,inan=sg,nom', joined=None)])
-        ]
+    parsed = _parse(corpus)
+    assert len(parsed) == 1
+    assert parsed[0] == [
+        ('Сегодня-завтра', 'Сегодня-завтра', 'ADV', 'hyphen'),
+        ('школа', 'школа', 'S,f,inan=sg,nom', None),
     ]
+
+
+def test_joined_hyphen_complex():
+    corpus = """
+    <se>
+    <w><ana lex="певец" gr="S,m,anim=pl,ins" joined="hyphen"></ana>певц`ами</w>-<w><ana lex="солист" gr="S,m,anim=pl,ins" joined="hyphen"></ana>сол`истами</w> ,
+    <w><ana lex="интернет" gr="S,m,inan=sg,nom" joined="hyphen"></ana>интерн`ет</w>-<w><ana lex="торговля" gr="S,f,inan=sg,gen" joined="hyphen"></ana>торг`овли</w>
+    <w><ana lex="они" gr="S-PRO,pl,3p=gen" joined="hyphen"></ana>их</w>-<w><ana lex="то" gr="PART" joined="hyphen"></ana>то</w></se>
+    """
+    parsed = _parse(corpus)
+    assert len(parsed) == 1
+    assert parsed[0] == [
+        ('певцами-солистами', 'певец-солист', 'S,m,anim=pl,ins', 'hyphen'),
+        (' ,', ' ,', 'PNCT', None),
+        ('интернет-торговли', 'интернет-торговля', 'S,f,inan=sg,gen', 'hyphen'),
+        ('их-то', 'они-то', 'S-PRO,pl,3p=gen', 'hyphen'),
+    ]
+
 
 
 def test_joined_together():
@@ -53,10 +69,8 @@ def test_joined_together():
     """
     assert _parse(corpus) == [
         [
-            ('Злословия', [rnc.Annotation(lex='злословие', gr='S,n,inan=sg,gen', joined=None)]),
-            (' -', [rnc.Annotation(lex=' -', gr='PNCT', joined=None)]),
-            ('полдюжины', [
-                rnc.Annotation(lex='пол', gr='NUM', joined='together'),
-                rnc.Annotation(lex='дюжина', gr='S,f,inan=sg,gen', joined='together')])
+            ('Злословия', 'злословие', 'S,n,inan=sg,gen', None),
+            (' -', ' -', 'PNCT', None),
+            ('полдюжины', 'полдюжина', 'S,f,inan=sg,gen', 'together')
         ]
     ]

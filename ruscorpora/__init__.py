@@ -13,6 +13,8 @@ from .tagset import Tag
 Token = namedtuple('Token', 'text annotations')
 Annotation = namedtuple('Annotation', 'lex gr joined')
 
+FlatToken = namedtuple('FlatToken', 'text lex gr joined')
+
 def parse_xml(source):
     """
     Parse XML file ``source`` (which can be obtained from ruscorpora.ru);
@@ -50,7 +52,8 @@ def parse_xml(source):
 
 
 def simplify(sents, remove_accents=True, join_split=True,
-             join_hyphenated=True, punct_tag='PNCT', wrap_tags=True):
+             join_hyphenated=True, punct_tag='PNCT', wrap_tags=True,
+             flat_tokens=True):
     """
     Simplify the result of ``sents`` parsing:
 
@@ -60,7 +63,8 @@ def simplify(sents, remove_accents=True, join_split=True,
     * join hyphenated words to a single token (if ``join_hyphenated==True``);
     * remove accents (if ``remove_accents==True``);
     * convert string tag representation to ruscorpora.Tag instances
-      (if ``wrap_tags==True``).
+      (if ``wrap_tags==True``);
+    * return tokens as FlatToken instances (if ``flat_tokens==True``).
     """
 
     def remove_extra_annotations(token):
@@ -68,6 +72,35 @@ def simplify(sents, remove_accents=True, join_split=True,
         if token.annotations is None:
             return (token.text, [None])
         return (token.text, [token.annotations[-1]])
+
+    def _token_to_flat(token):
+        ann = token.annotations
+        if ann[0] is None:
+            return FlatToken(token.text, None, None, None)
+
+        if all(a.joined == 'together' for a in ann):
+            return FlatToken(
+                token.text,
+                "".join(a.lex for a in ann),
+                token.annotations[-1].gr,
+                'together'
+            )
+
+        if len(ann) == 2 and all(a.joined == 'hyphen' for a in ann):
+            ann1, ann2 = ann
+
+            tag = ann2.gr
+            if str(ann2.gr) in set(['PART', 'NUM=ciph', 'PR']):
+                tag = ann1.gr
+
+            return FlatToken(
+                token.text,
+                "-".join([ann1.lex, ann2.lex]),
+                tag,
+                'hyphen'
+            )
+
+        return FlatToken(token.text, ann[0].lex, ann[0].gr, ann[0].joined)
 
     def _combine_tokens(tokens):
         text = "".join(t[0] for t in tokens)
@@ -139,12 +172,21 @@ def simplify(sents, remove_accents=True, join_split=True,
         if wrap_tags:
             sent = with_wrapped_tags(sent)
 
-        yield [Token(*t) for t in sent]
+        sent = [Token(*t) for t in sent]
+        if flat_tokens:
+            sent = [_token_to_flat(t) for t in sent]
+
+        yield sent
+
+
+
+def parse_simple(source, **simplify_kwargs):
+    return simplify(parse_xml(source), **simplify_kwargs)
 
 
 if __name__ == '__main__':
     import sys
-    for sent in simplify(parse_xml(sys.argv[1])):
+    for sent in parse_simple(sys.argv[1]):
         for tok in sent:
             print(tok)
         print("\n")

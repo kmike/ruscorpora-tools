@@ -29,8 +29,8 @@ an iterator over sentences; each sentence is a list of ``ruscorpora.Token``
 instances, annotated with a list of ``ruscorpora.Annotation`` instances.
 
 ``ruscorpora.simplify`` simplifies a result of ``ruscorpora.parse_xml`` by
-removing ambiguous annotations, joining split tokens and removing accent
-information.
+removing ambiguous annotations, joining split tokens (+ joining their
+annotations) and removing accent information.
 
 ::
 
